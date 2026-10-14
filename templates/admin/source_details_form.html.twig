@@ -1,0 +1,82 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mapping de {{ source.label }}{% endblock %}
+
+{% block body %}
+<main class="container">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Mapping de la source</p>
+            <h1>{{ source.label }}</h1>
+            <p>{{ isCustomMapping ? 'Modification du mapping personnalisé' : 'Création depuis le mapping standard PrestaShop' }}</p>
+        </div>
+        <a class="button button-secondary" href="{{ path('app_admin_source_details', {source: sourceName}) }}">Annuler</a>
+    </header>
+
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}<div class="flash flash-{{ type }}">{{ message }}</div>{% endfor %}
+    {% endfor %}
+
+    {% if connectionError %}
+        <div class="flash flash-error">Impossible de lire les colonnes : {{ connectionError }}</div>
+    {% endif %}
+
+    {% set labels = {
+        order: 'Commandes',
+        orderProduct: 'Produits de commande',
+        account: 'Clients',
+        address: 'Adresses'
+    } %}
+
+    <form method="post">
+        <input type="hidden" name="_token" value="{{ csrf_token('source-mapping-' ~ sourceName) }}">
+
+        {% for context, contextMapping in mapping %}
+            {% set columns = schema[context].columns|default([]) %}
+            <section class="panel">
+                <div class="panel-title">
+                    <h2>{{ labels[context] }}</h2>
+                    <span>{{ schema[context].table|default('Table indisponible') }}</span>
+                </div>
+
+                <datalist id="columns-{{ context }}">
+                    {% for column in columns %}<option value="{{ column }}"></option>{% endfor %}
+                </datalist>
+
+                <div class="mapping-list">
+                    {% for sourceField, targetField in contextMapping %}
+                        <div class="mapping-row">
+                            <input type="hidden" name="mapping[{{ context }}][{{ loop.index0 }}][context]" value="{{ context }}">
+                            <label>
+                                Champ source
+                                <input
+                                    name="mapping[{{ context }}][{{ loop.index0 }}][sourceField]"
+                                    value="{{ sourceField }}"
+                                    list="columns-{{ context }}"
+                                    required
+                                >
+                            </label>
+                            <span class="mapping-arrow">→</span>
+                            <label>
+                                Champ intégration
+                                <input
+                                    name="mapping[{{ context }}][{{ loop.index0 }}][targetField]"
+                                    value="{{ targetField }}"
+                                    required
+                                >
+                            </label>
+                        </div>
+                    {% else %}
+                        <p>Aucune correspondance disponible pour ce contexte.</p>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endfor %}
+
+        <div class="form-footer">
+            <a class="button button-secondary" href="{{ path('app_admin_source_details', {source: sourceName}) }}">Annuler</a>
+            <button class="button" type="submit">Enregistrer le mapping</button>
+        </div>
+    </form>
+</main>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ sourceName ? 'Modifier la source' : 'Ajouter une source' }}{% endblock %}
+
+{% block body %}
+<main class="container narrow">
+    <header class="page-header">
+        <div><p class="eyebrow">Configuration</p><h1>{{ sourceName ? 'Modifier la source' : 'Ajouter une source PrestaShop' }}</h1></div>
+        <a class="button button-secondary" href="{{ path('app_admin_dashboard') }}">Retour</a>
+    </header>
+    {% for message in app.flashes('error') %}<div class="flash flash-error">{{ message }}</div>{% endfor %}
+    <form class="panel form-grid" method="post">
+        <input type="hidden" name="_token" value="{{ csrf_token('source-form') }}">
+        <label>Code de la source<input name="name" value="{{ sourceName|default(source.name|default('')) }}" required pattern="[a-z0-9_-]+"></label>
+        <label>Nom affiché<input name="label" value="{{ source.label|default('') }}" required></label>
+        <label>Version PrestaShop<input name="version" value="{{ source.version|default('8') }}" required></label>
+        <label>Plateforme<select name="platform"><option value="b2c" {{ source.platform|default('b2c') == 'b2c' ? 'selected' : '' }}>B2C</option><option value="b2b" {{ source.platform|default('') == 'b2b' ? 'selected' : '' }}>B2B</option></select></label>
+        <label>Hôte<input name="host" value="{{ source.host|default('127.0.0.1') }}" required></label>
+        <label>Port<input name="port" type="number" value="{{ source.port|default(3306) }}" required></label>
+        <label>Base de données<input name="database" value="{{ source.database|default('') }}" required></label>
+        <label>Préfixe des tables<input name="prefix" value="{{ source.prefix|default('ps_') }}" required></label>
+        <label>Utilisateur<input name="user" value="{{ source.user|default('root') }}" required></label>
+        <label>Mot de passe<input name="password" type="password" placeholder="Laisser vide pour conserver le mot de passe"></label>
+        <label class="checkbox"><input name="enabled" type="checkbox" {{ source.enabled|default(true) ? 'checked' : '' }}> Source active</label>
+        <div class="form-actions"><button class="button" type="submit">Enregistrer</button></div>
+    </form>
+</main>
+{% endblock %}

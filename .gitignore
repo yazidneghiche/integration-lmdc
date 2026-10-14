@@ -1,0 +1,32 @@
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+###> configuration locale LMDC ###
+/config/sources.php
+/config/mappings/*.local.php
+###< configuration locale LMDC ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###
+
+###> symfony/asset-mapper ###
+/public/assets/
+/assets/vendor/
+###< symfony/asset-mapper ###
+
+###> fichiers temporaires et locaux ###
+/.DS_Store
+/.idea/
+/.vscode/
+/auth.json
+*.log
+###< fichiers temporaires et locaux ###

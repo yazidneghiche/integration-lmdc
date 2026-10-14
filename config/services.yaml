@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+# See also https://symfony.com/doc/current/service_container/import.html
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+    cronlog: '%kernel.project_dir%/var/log/cron/'
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones
+    # Surcharge spécifique pour SageApiClient (à cause du $baseUrl)
+
+    App\Service\ApiOrder:
+        arguments:
+            $baseUrl: '%env(API_BASE_URL)%'
+            $apiKey: '%env(API_KEY)%'
+    App\Service\CronLog:
+        arguments:
+            $dirCronLog: '%cronlog%'
+    App\Service\SourceConnection:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+    App\Service\MapperService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+    App\Service\SourceConfigService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+    App\Service\SyncAccountService:
+        arguments:
+            $accountsApiUrl: '%env(API_BASE_URL)%'
+            $apiKey: '%env(API_KEY)%'
+    App\Service\PushNewAccountsService:
+        arguments:
+            $accountsApiUrl: '%env(API_BASE_URL)%'
+            $apiKey: '%env(API_KEY)%'
+    App\Service\MonitoringService:
+        arguments:
+            $baseUrl: '%env(API_BASE_URL)%'
+            $apiKey: '%env(API_KEY)%'
+            $monitoringPath: '%env(API_MONITORING_PATH)%'
+    App\Service\SourceMappingService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+    App\Service\MissingCtNumberService:
+        arguments:
+            $sender: '%env(MAILER_FROM)%'
+            $recipient: '%env(MAILER_TO)%'

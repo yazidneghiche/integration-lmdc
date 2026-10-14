@@ -1,0 +1,84 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails de {{ source.label }}{% endblock %}
+
+{% block body %}
+<main class="container">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Source PrestaShop</p>
+            <h1>{{ source.label }}</h1>
+            <p><code>{{ sourceName }}</code> · {{ source.database }} · préfixe {{ source.prefix }}</p>
+        </div>
+        <div class="header-actions">
+            <a class="button button-secondary" href="{{ path('app_admin_dashboard') }}">Retour</a>
+            <a class="button" href="{{ path('app_admin_source_mapping', {source: sourceName}) }}">
+                {{ isCustomMapping ? 'Modifier le mapping' : 'Créer le mapping' }}
+            </a>
+        </div>
+    </header>
+
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}<div class="flash flash-{{ type }}">{{ message }}</div>{% endfor %}
+    {% endfor %}
+
+    <section class="panel">
+        <div class="panel-title">
+            <h2>Connexion</h2>
+            <span class="status {{ connectionError ? 'status-error' : 'status-ok' }}">
+                {{ connectionError ? 'Échec' : 'Connectée' }}
+            </span>
+        </div>
+        {% if connectionError %}<p class="error-text">{{ connectionError }}</p>{% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="panel-title">
+            <h2>Mapping utilisé</h2>
+            <span class="status {{ isCustomMapping ? 'status-custom' : 'status-standard' }}">
+                {{ isCustomMapping ? 'Personnalisé' : 'Standard PrestaShop' }}
+            </span>
+        </div>
+    </section>
+
+    {% set labels = {
+        order: 'Commandes',
+        orderProduct: 'Produits de commande',
+        account: 'Clients',
+        address: 'Adresses'
+    } %}
+
+    {% for context, contextMapping in mapping %}
+        {% set columns = schema[context].columns|default([]) %}
+        {% set customerColumns = schema.account.columns|default([]) %}
+        <section class="panel">
+            <div class="panel-title">
+                <h2>{{ labels[context] }}</h2>
+                <span>{{ schema[context].table|default('Table indisponible') }}</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>Contexte</th><th>Champ source</th><th>Champ intégration</th><th>État</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for sourceField, targetField in contextMapping %}
+                        {% set physicalField = sourceField == 'customer_date_upd' ? 'date_upd' : sourceField %}
+                        {% set customerField = context == 'order' and sourceField in ['company', 'email', 'ct_number'] %}
+                        {% set found = physicalField in columns or sourceField == 'country' or (customerField and physicalField in customerColumns) %}
+                        <tr>
+                            <td><code>{{ context }}</code></td>
+                            <td><code>{{ sourceField }}</code></td>
+                            <td><code>{{ targetField }}</code></td>
+                            <td><span class="status {{ found ? 'status-ok' : 'status-error' }}">{{ found ? 'Trouvé' : 'Absent' }}</span></td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4">Aucune correspondance configurée.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% endfor %}
+</main>
+{% endblock %}

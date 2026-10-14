@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Test de synchronisation{% endblock %}
+
+{% block body %}
+<main class="admin-page">
+    <h1>Test de synchronisation</h1>
+    <p>À utiliser uniquement avec une source et une base PrestaShop de test.</p>
+
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    {% if result %}<pre>{{ result|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>{% endif %}
+
+    <section>
+        <h2>1. Créer et importer un scénario</h2>
+        <form method="post">
+            <input type="hidden" name="_token" value="{{ csrf_token('test-sync') }}">
+            <input type="hidden" name="action" value="start">
+            <label for="source">Code de la source de test</label>
+            <input id="source" name="source" required placeholder="prestashop_test">
+            <button type="submit">Lancer le test</button>
+        </form>
+    </section>
+
+    <section>
+        <h2>2. Vérifier le CT_Num</h2>
+        <form method="post">
+            <input type="hidden" name="_token" value="{{ csrf_token('test-sync') }}">
+            <input type="hidden" name="action" value="resume">
+            <label for="order_id">ID de la commande dans l’intégration</label>
+            <input id="order_id" name="order_id" type="number" min="1" required>
+            <button type="submit">Relancer la vérification</button>
+        </form>
+        <p>L’envoi réel à l’API reste volontairement disponible uniquement en console avec <code>--push</code>.</p>
+    </section>
+</main>
+{% endblock %}

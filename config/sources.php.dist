@@ -1,0 +1,20 @@
+)-<?php
+
+return [
+    'sources' => [
+        'prestashop' => [
+            'label' => 'PrestaShop',
+            'version' => '8',
+            'driver' => 'pdo_mysql',
+            'host' => '127.0.0.1',
+            'port' => 3306,
+            'database' => 'prestashop',
+            'user' => 'root',
+            'password' => '',
+            'charset' => 'utf8mb4',
+            'prefix' => 'ps_',
+            'platform' => 'b2c',
+            'enabled' => true,
+        ],
+    ],
+];

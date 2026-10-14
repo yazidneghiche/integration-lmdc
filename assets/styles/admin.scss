@@ -1,0 +1,49 @@
+.header-actions,
+.form-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-standard {
+    color: #334155;
+    background: #e2e8f0;
+}
+
+.status-custom {
+    color: #5b21b6;
+    background: #ede9fe;
+}
+
+.mapping-list {
+    display: grid;
+    gap: 14px;
+}
+
+.mapping-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: end;
+    gap: 14px;
+}
+
+.mapping-arrow {
+    padding-bottom: 11px;
+    color: #657087;
+    font-size: 22px;
+}
+
+.form-footer {
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+@media (max-width: 650px) {
+    .mapping-row {
+        grid-template-columns: 1fr;
+    }
+
+    .mapping-arrow {
+        display: none;
+    }
+}

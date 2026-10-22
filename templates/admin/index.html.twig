@@ -2,6 +2,27 @@
 
 {% block title %}Administration LMDC{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .monitoring-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid #ccc; margin: 20px 0; }
+        .monitoring-tab { display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #222; font: inherit; white-space: nowrap; cursor: pointer; }
+        .monitoring-tab[aria-selected="true"] { border-bottom-color: #111; font-weight: 700; }
+        .monitoring-tab:hover { background: #f2f2f2; }
+        .monitoring-tab:focus-visible { outline: 2px solid #111; outline-offset: -3px; }
+        .monitoring-count { font-size: 12px; background: #eee; padding: 1px 6px; }
+        .monitoring-content[hidden] { display: none !important; }
+        .monitoring-table td { vertical-align: top; }
+        .monitoring-table .monitoring-message { white-space: normal; min-width: 240px; overflow-wrap: anywhere; }
+        .monitoring-table .monitoring-file { white-space: normal; min-width: 180px; overflow-wrap: anywhere; }
+        .monitoring-table .monitoring-day th { padding-top: 22px; background: #f5f5f5; color: #222; }
+        .monitoring-content pre { max-width: 760px; max-height: 350px; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .monitoring-content summary { cursor: pointer; margin-top: 6px; }
+        .monitoring-empty { color: #555; padding: 16px 0; }
+        .monitoring-note { color: #555; font-size: 13px; }
+    </style>
+{% endblock %}
+
 {% block body %}
 <main class="container">
     <header class="page-header">
@@ -24,14 +45,104 @@
         <article class="card"><span>Commandes synchronisées</span><strong>{{ stats.ordersSynchronized }}</strong></article>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="monitoring">
         <div class="panel-title">
             <h2>Monitoring API</h2>
             <span class="status {{ monitoring.available ? 'status-ok' : 'status-error' }}">{{ monitoring.available ? 'Disponible' : 'Indisponible' }}</span>
         </div>
-        {% if monitoring.error %}<p class="error-text">{{ monitoring.error }}</p>
-        {% elseif monitoring.data %}<pre>{{ monitoring.data|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
-        {% else %}<p>Aucune donnée retournée.</p>{% endif %}
+
+        {% if monitoring.error %}
+            <p class="error-text">{{ monitoring.error }}</p>
+        {% else %}
+            {% set groups = monitoring.data.monitoring|default({}) %}
+            {% set contexts = {orders: 'Commandes', accounts: 'Comptes', logs: 'Logs généraux'} %}
+            {% set categories = {done: 'Terminé', error: 'Erreur', results: 'Résultat', cronlog: 'Log'} %}
+
+            {% if monitoring.data.errors|default([])|length %}
+                <details>
+                    <summary>Certains fichiers ou dossiers n’ont pas pu être lus ({{ monitoring.data.errors|length }})</summary>
+                    <ul>
+                        {% for error in monitoring.data.errors %}
+                            <li>{{ error.message|default('Lecture impossible') }} — <code>{{ error.file|default(error.directory|default('')) }}</code></li>
+                        {% endfor %}
+                    </ul>
+                </details>
+            {% endif %}
+
+            <div class="monitoring-tabs" role="tablist" aria-label="Contexte du monitoring">
+                {% for context, label in contexts %}
+                    {% set count = 0 %}
+                    {% for entries in groups[context]|default({}) %}
+                        {% set count = count + entries|length %}
+                    {% endfor %}
+                    <button type="button" class="monitoring-tab" role="tab"
+                            id="tab-monitoring-{{ context }}"
+                            data-context="{{ context }}"
+                            aria-controls="monitoring-{{ context }}"
+                            aria-selected="{{ loop.first ? 'true' : 'false' }}"
+                            tabindex="{{ loop.first ? '0' : '-1' }}">
+                        {{ label }} <span class="monitoring-count">{{ count }}</span>
+                    </button>
+                {% endfor %}
+            </div>
+            <p class="monitoring-note">Entrées regroupées par jour, des plus récentes aux plus anciennes. Un traitement peut avoir une archive et un résultat.</p>
+
+            {% for context, label in contexts %}
+                {% set days = groups[context]|default({}) %}
+                <div class="monitoring-content" id="monitoring-{{ context }}"
+                     role="tabpanel" aria-labelledby="tab-monitoring-{{ context }}"
+                     tabindex="0" {% if not loop.first %}hidden{% endif %}>
+                    <h3>{{ label }}</h3>
+                    {% if days|length %}
+                        <div class="table-wrapper">
+                            <table class="monitoring-table">
+                                <thead>
+                                    <tr><th>Date</th><th>Type</th><th>Fichier</th><th>État</th><th>Résumé et détail</th></tr>
+                                </thead>
+                                <tbody>
+                                {% for day, entries in days %}
+                                    <tr class="monitoring-day"><th colspan="5" scope="rowgroup">{{ day }}</th></tr>
+                                    {% for entry in entries %}
+                                        {% set data = entry.data|default({}) %}
+                                        {% set level = data.level_name|default(data.level|default('')) %}
+                                        {% set result = data.success is defined ? data.success : null %}
+                                        {% set failed = entry.category == 'error' or result is same as(false) or data.parsingError|default(false) or level in ['ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'] %}
+                                        {% set succeeded = result is same as(true) %}
+                                        {% set message = data.message|default(data.error|default('')) %}
+                                        <tr>
+                                            <td><time datetime="{{ entry.date }}">{{ entry.date }}</time></td>
+                                            <td>{{ categories[entry.category]|default(entry.category) }}</td>
+                                            <td class="monitoring-file"><code>{{ entry.file }}</code></td>
+                                            <td>
+                                                {% if failed %}
+                                                    <span class="status status-error">Erreur</span>
+                                                {% elseif succeeded %}
+                                                    <span class="status status-ok">OK</span>
+                                                {% elseif entry.category == 'done' %}
+                                                    Archivé
+                                                {% else %}
+                                                    {{ level ?: 'Information' }}
+                                                {% endif %}
+                                            </td>
+                                            <td class="monitoring-message">
+                                                {% if message is iterable %}{{ message|json_encode }}{% else %}{{ message ?: '—' }}{% endif %}
+                                                <details>
+                                                    <summary>Voir le contenu</summary>
+                                                    <pre>{{ data|json_encode(constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_UNICODE')) }}</pre>
+                                                </details>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="monitoring-empty">Aucune entrée disponible pour ce contexte.</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endif %}
     </section>
 
     <section class="panel">
@@ -45,9 +156,7 @@
                         <td><code>{{ name }}</code></td><td>{{ source.label }}</td><td>{{ source.database }}</td><td>{{ source.prefix }}</td>
                         <td>{{ source.platform|default('b2c')|upper }}</td><td>{{ source.enabled ? 'Active' : 'Inactive' }}</td>
                         <td class="actions">
-                            <a href="{{ path('app_admin_source_details', {source: name}) }}">
-                                Détails
-                            </a>
+                            <a href="{{ path('app_admin_source_details', {source: name}) }}">Détails</a>
                             <a href="{{ path('app_admin_source_edit', {source: name}) }}">Modifier</a>
                             <form method="post" action="{{ path('app_admin_source_test', {source: name}) }}"><input type="hidden" name="_token" value="{{ csrf_token('test-source-' ~ name) }}"><button class="link-button" type="submit">Tester</button></form>
                             <form method="post" action="{{ path('app_admin_source_delete', {source: name}) }}" onsubmit="return confirm('Supprimer cette source ?');"><input type="hidden" name="_token" value="{{ csrf_token('delete-source-' ~ name) }}"><button class="link-button danger" type="submit">Supprimer</button></form>
@@ -59,4 +168,43 @@
         </div>
     </section>
 </main>
+<script>
+(() => {
+    const root = document.getElementById('monitoring');
+    if (!root) return;
+    const tabs = Array.from(root.querySelectorAll('[role="tab"]'));
+    if (!tabs.length) return;
+    const panels = Array.from(root.querySelectorAll('[role="tabpanel"]'));
+
+    function selectTab(tab, focus = false, remember = false) {
+        tabs.forEach(item => {
+            const selected = item === tab;
+            item.setAttribute('aria-selected', selected ? 'true' : 'false');
+            item.tabIndex = selected ? 0 : -1;
+        });
+        panels.forEach(panel => {
+            panel.hidden = panel.id !== tab.getAttribute('aria-controls');
+        });
+        if (focus) tab.focus();
+        if (remember) window.history.replaceState(null, '', '#' + tab.getAttribute('aria-controls'));
+    }
+
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => selectTab(tab, false, true));
+        tab.addEventListener('keydown', event => {
+            let target = index;
+            if (event.key === 'ArrowRight') target = (index + 1) % tabs.length;
+            else if (event.key === 'ArrowLeft') target = (index + tabs.length - 1) % tabs.length;
+            else if (event.key === 'Home') target = 0;
+            else if (event.key === 'End') target = tabs.length - 1;
+            else return;
+            event.preventDefault();
+            selectTab(tabs[target], true, true);
+        });
+    });
+
+    const initial = tabs.find(tab => '#' + tab.getAttribute('aria-controls') === window.location.hash);
+    selectTab(initial || tabs[0]);
+})();
+</script>
 {% endblock %}

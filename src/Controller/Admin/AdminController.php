@@ -15,6 +15,17 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/admin', name: 'app_admin_')]
 final class AdminController extends AbstractController
 {
+
+ /*   #[Route('/', name: 'app_home', methods: ['GET'])]
+    public function home(): Response
+    {
+        return $this->redirectToRoute(
+            $this->isGranted('ROLE_ADMIN')
+                ? 'app_admin_dashboard'
+                : 'app_login'
+        );
+    }*/
+
     #[Route('', name: 'dashboard', methods: ['GET'])]
     public function dashboard(
         AccountRepository $accountRepository,

@@ -1,0 +1,176 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Test de création de compte{% endblock %}
+
+{% block body %}
+    <main class="account-test">
+        <h1>Créer un compte de test</h1>
+
+        <form id="account-test-form"
+              action="{{ path('app_api_accounts_create') }}"
+              method="post">
+
+            <label>
+                Source
+                <input name="source" value="test" maxlength="64" required>
+            </label>
+
+            <label>
+                Plateforme
+                <input name="platform" value="formulaire-admin"
+                       maxlength="64" required>
+            </label>
+
+            <label>
+                Société
+                <input name="company" value="Société de test"
+                       maxlength="255" required>
+            </label>
+
+            <label>
+                E-mail
+                <input type="email" name="email"
+                       value="test-{{ 'now'|date('YmdHis') }}@example.com"
+                       maxlength="255" required>
+            </label>
+
+            <label>
+                Prénom
+                <input name="firstname" value="Test" maxlength="255">
+            </label>
+
+            <label>
+                Nom
+                <input name="lastname" value="Automatique" maxlength="255">
+            </label>
+
+            <label>
+                Téléphone
+                <input type="tel" name="phone" maxlength="255">
+            </label>
+
+            <label>
+                Adresse
+                <input name="address" value="1 rue du Test" maxlength="255">
+            </label>
+
+            <label>
+                Complément d’adresse
+                <input name="address_complement" maxlength="255">
+            </label>
+
+            <label>
+                Code postal
+                <input name="zipcode" value="54000" maxlength="255" required>
+            </label>
+
+            <label>
+                Ville
+                <input name="city" value="Nancy" maxlength="255" required>
+            </label>
+
+            <label>
+                Pays
+                <input name="country" value="FR" maxlength="255" required>
+            </label>
+
+            <label>
+                TVA
+                <input name="vat" maxlength="255">
+            </label>
+
+            <label>
+                SIRET
+                <input name="siret" maxlength="32">
+            </label>
+
+            <button type="submit">Créer le compte</button>
+        </form>
+
+        <pre id="account-test-result" role="status" aria-live="polite"></pre>
+    </main>
+
+    <style>
+        .account-test {
+            max-width: 700px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            color: #111;
+        }
+
+        .account-test form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .account-test label {
+            display: flex;
+            flex-direction: column;
+            gap: .4rem;
+        }
+
+        .account-test input {
+            padding: .65rem;
+            border: 1px solid #aaa;
+            border-radius: 0;
+        }
+
+        .account-test button {
+            padding: .8rem;
+            border: 0;
+            background: #111;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .account-test button:disabled {
+            opacity: .5;
+        }
+
+        .account-test pre {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+    </style>
+
+    <script>
+        const form = document.getElementById('account-test-form');
+        const result = document.getElementById('account-test-result');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const button = form.querySelector('button');
+            button.disabled = true;
+            result.textContent = 'Envoi en cours…';
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(
+                        Object.fromEntries(new FormData(form))
+                    )
+                });
+
+                const text = await response.text();
+
+                try {
+                    result.textContent = 'HTTP ' + response.status + '\n'
+                        + JSON.stringify(JSON.parse(text), null, 2);
+                } catch {
+                    result.textContent = 'HTTP ' + response.status
+                        + ' — Réponse non JSON. Vérifie les logs du serveur.';
+                }
+            } catch (error) {
+                result.textContent = 'Envoi non confirmé : ' + error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+    </script>
+{% endblock %}

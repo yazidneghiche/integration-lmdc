@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Administration LMDC{% endblock %}
+
+{% block body %}
+<main class="container">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Integration Gateway</p>
+            <h1>Administration LMDC</h1>
+            <p>État des synchronisations et configuration des sources PrestaShop.</p>
+        </div>
+        <a class="button" href="{{ path('app_admin_source_new') }}">Ajouter une source</a>
+    </header>
+
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}<div class="flash flash-{{ type }}">{{ message }}</div>{% endfor %}
+    {% endfor %}
+
+    <section class="stats-grid">
+        <article class="card"><span>Comptes</span><strong>{{ stats.accounts }}</strong></article>
+        <article class="card"><span>Sans CT Number</span><strong>{{ stats.accountsWithoutCtNumber }}</strong></article>
+        <article class="card"><span>Commandes en attente</span><strong>{{ stats.ordersPending }}</strong></article>
+        <article class="card"><span>Commandes synchronisées</span><strong>{{ stats.ordersSynchronized }}</strong></article>
+    </section>
+
+    <section class="panel">
+        <div class="panel-title">
+            <h2>Monitoring API</h2>
+            <span class="status {{ monitoring.available ? 'status-ok' : 'status-error' }}">{{ monitoring.available ? 'Disponible' : 'Indisponible' }}</span>
+        </div>
+        {% if monitoring.error %}<p class="error-text">{{ monitoring.error }}</p>
+        {% elseif monitoring.data %}<pre>{{ monitoring.data|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+        {% else %}<p>Aucune donnée retournée.</p>{% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="panel-title"><h2>Sources PrestaShop</h2><span>{{ sources|length }} source(s)</span></div>
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Code</th><th>Nom</th><th>Base</th><th>Préfixe</th><th>Plateforme</th><th>État</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for name, source in sources %}
+                    <tr>
+                        <td><code>{{ name }}</code></td><td>{{ source.label }}</td><td>{{ source.database }}</td><td>{{ source.prefix }}</td>
+                        <td>{{ source.platform|default('b2c')|upper }}</td><td>{{ source.enabled ? 'Active' : 'Inactive' }}</td>
+                        <td class="actions">
+                            <a href="{{ path('app_admin_source_details', {source: name}) }}">
+                                Détails
+                            </a>
+                            <a href="{{ path('app_admin_source_edit', {source: name}) }}">Modifier</a>
+                            <form method="post" action="{{ path('app_admin_source_test', {source: name}) }}"><input type="hidden" name="_token" value="{{ csrf_token('test-source-' ~ name) }}"><button class="link-button" type="submit">Tester</button></form>
+                            <form method="post" action="{{ path('app_admin_source_delete', {source: name}) }}" onsubmit="return confirm('Supprimer cette source ?');"><input type="hidden" name="_token" value="{{ csrf_token('delete-source-' ~ name) }}"><button class="link-button danger" type="submit">Supprimer</button></form>
+                        </td>
+                    </tr>
+                {% else %}<tr><td colspan="7">Aucune source configurée.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+{% endblock %}

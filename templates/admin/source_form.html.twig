@@ -21,7 +21,8 @@
         <label>Préfixe des tables<input name="prefix" value="{{ source.prefix|default('ps_') }}" required></label>
         <label>Utilisateur<input name="user" value="{{ source.user|default('root') }}" required></label>
         <label>Mot de passe<input name="password" type="password" placeholder="Laisser vide pour conserver le mot de passe"></label>
-        <label class="checkbox"><input name="enabled" type="checkbox" {{ source.enabled|default(true) ? 'checked' : '' }}> Source active</label>
+        <label class="checkbox">
+            <input name="enabled" type="checkbox"   {{ (source.enabled ?? true) ? 'checked' : '' }}}> Source active</label>
         <div class="form-actions"><button class="button" type="submit">Enregistrer</button></div>
     </form>
 </main>

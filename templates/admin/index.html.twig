@@ -20,6 +20,68 @@
         .monitoring-content summary { cursor: pointer; margin-top: 6px; }
         .monitoring-empty { color: #555; padding: 16px 0; }
         .monitoring-note { color: #555; font-size: 13px; }
+
+
+        .cron-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 15px 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+            width:400px;
+            margin-bottom:20px;
+        }
+
+        .cron-control .cron-status {
+            margin-top: 3px;
+            font-size: 13px;
+            color: #777;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch .slider {
+            position: absolute;
+            inset: 0;
+            cursor: pointer;
+            background: #ccc;
+            border-radius: 28px;
+            transition: 0.2s;
+        }
+
+        .switch .slider::before {
+            content: "";
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            left: 3px;
+            top: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+
+        .switch input:checked + .slider {
+            background: #28a745;
+        }
+
+        .switch input:checked + .slider::before {
+            transform: translateX(24px);
+        }
     </style>
 {% endblock %}
 
@@ -38,11 +100,51 @@
         {% for message in messages %}<div class="flash flash-{{ type }}">{{ message }}</div>{% endfor %}
     {% endfor %}
 
+    <div class="cron-control">
+        <span>Synchronisation automatique</span>
+
+        <label class="switch">
+            <input
+                type="checkbox"
+                id="cron-toggle"
+                {{ cronEnabled ? 'checked' : '' }}
+            >
+            <span class="slider"></span>
+        </label>
+
+        <span id="cron-status">
+        {{ cronEnabled ? 'Activée' : 'Désactivée' }}
+    </span>
+    </div>
+
     <section class="stats-grid">
         <article class="card"><span>Comptes</span><strong>{{ stats.accounts }}</strong></article>
         <article class="card"><span>Sans CT Number</span><strong>{{ stats.accountsWithoutCtNumber }}</strong></article>
         <article class="card"><span>Commandes en attente</span><strong>{{ stats.ordersPending }}</strong></article>
         <article class="card"><span>Commandes synchronisées</span><strong>{{ stats.ordersSynchronized }}</strong></article>
+    </section>
+
+    <section class="panel">
+        <div class="panel-title"><h2>Sources PrestaShop</h2><span>{{ sources|length }} source(s)</span></div>
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Code</th><th>Nom</th><th>Base</th><th>Préfixe</th><th>Plateforme</th><th>État</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for name, source in sources %}
+                    <tr>
+                        <td><code>{{ name }}</code></td><td>{{ source.label }}</td><td>{{ source.database }}</td><td>{{ source.prefix }}</td>
+                        <td>{{ source.platform|default('b2c')|upper }}</td><td>{{ source.enabled ? 'Active' : 'Inactive' }}</td>
+                        <td class="actions">
+                            <a href="{{ path('app_admin_source_details', {source: name}) }}">Détails</a>
+                            <a href="{{ path('app_admin_source_edit', {source: name}) }}">Modifier</a>
+                            <form method="post" action="{{ path('app_admin_source_test', {source: name}) }}"><input type="hidden" name="_token" value="{{ csrf_token('test-source-' ~ name) }}"><button class="link-button" type="submit">Tester</button></form>
+                            <form method="post" action="{{ path('app_admin_source_delete', {source: name}) }}" onsubmit="return confirm('Supprimer cette source ?');"><input type="hidden" name="_token" value="{{ csrf_token('delete-source-' ~ name) }}"><button class="link-button danger" type="submit">Supprimer</button></form>
+                        </td>
+                    </tr>
+                {% else %}<tr><td colspan="7">Aucune source configurée.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
     </section>
 
     <section class="panel" id="monitoring">
@@ -144,29 +246,6 @@
             {% endfor %}
         {% endif %}
     </section>
-
-    <section class="panel">
-        <div class="panel-title"><h2>Sources PrestaShop</h2><span>{{ sources|length }} source(s)</span></div>
-        <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Code</th><th>Nom</th><th>Base</th><th>Préfixe</th><th>Plateforme</th><th>État</th><th>Actions</th></tr></thead>
-                <tbody>
-                {% for name, source in sources %}
-                    <tr>
-                        <td><code>{{ name }}</code></td><td>{{ source.label }}</td><td>{{ source.database }}</td><td>{{ source.prefix }}</td>
-                        <td>{{ source.platform|default('b2c')|upper }}</td><td>{{ source.enabled ? 'Active' : 'Inactive' }}</td>
-                        <td class="actions">
-                            <a href="{{ path('app_admin_source_details', {source: name}) }}">Détails</a>
-                            <a href="{{ path('app_admin_source_edit', {source: name}) }}">Modifier</a>
-                            <form method="post" action="{{ path('app_admin_source_test', {source: name}) }}"><input type="hidden" name="_token" value="{{ csrf_token('test-source-' ~ name) }}"><button class="link-button" type="submit">Tester</button></form>
-                            <form method="post" action="{{ path('app_admin_source_delete', {source: name}) }}" onsubmit="return confirm('Supprimer cette source ?');"><input type="hidden" name="_token" value="{{ csrf_token('delete-source-' ~ name) }}"><button class="link-button danger" type="submit">Supprimer</button></form>
-                        </td>
-                    </tr>
-                {% else %}<tr><td colspan="7">Aucune source configurée.</td></tr>{% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
 </main>
 <script>
 (() => {
@@ -206,5 +285,44 @@
     const initial = tabs.find(tab => '#' + tab.getAttribute('aria-controls') === window.location.hash);
     selectTab(initial || tabs[0]);
 })();
+
+
+
+//cron
+
+const cronToggle = document.getElementById('cron-toggle');
+const cronStatus = document.getElementById('cron-status');
+
+if (cronToggle) {
+    cronToggle.addEventListener('click', async () => {
+        try {
+            const response = await fetch('/admin/cron/toggle', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Erreur');
+            }
+
+            const data = await response.json();
+
+            cronStatus.textContent = data.enabled
+                ? 'Activée'
+                : 'Désactivée';
+
+            cronToggle.textContent = data.enabled
+                ? 'Désactiver la synchronisation'
+                : 'Activer la synchronisation';
+
+            cronToggle.dataset.enabled = data.enabled ? '1' : '0';
+
+        } catch (error) {
+            alert('Impossible de modifier la synchronisation.');
+        }
+    });
+}
 </script>
 {% endblock %}

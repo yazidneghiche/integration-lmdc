@@ -8,6 +8,7 @@ use App\Service\MonitoringService;
 use App\Service\SourceConfigService;
 use App\Service\SourceMappingService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -33,9 +34,15 @@ final class AdminController extends AbstractController
         SourceConfigService $sourceConfigService,
         MonitoringService $monitoringService,
     ): Response {
+
+        $disabledFile = $this->getParameter('kernel.project_dir') . '/cron/cron.disabled';
+
+        $cronEnabled = !is_file($disabledFile);
+
         return $this->render('admin/index.html.twig', [
             'sources' => $sourceConfigService->all(),
             'monitoring' => $monitoringService->getStatus(),
+            'cronEnabled' => $cronEnabled,
             'stats' => [
                 'accounts' => $accountRepository->count([]),
                 'accountsWithoutCtNumber' => $accountRepository->countWithoutCtNumber(),
@@ -226,5 +233,46 @@ final class AdminController extends AbstractController
         ]);
     }
 
+    #[Route('/test-source', name: 'test_source', methods: ['GET'])]
+    public function testSourceSave(SourceConfigService $service): Response
+    {
+        $service->save('fake_shop', [
+            'label' => 'Fake Shop',
+            'version' => '8',
+            'host' => '127.0.0.1',
+            'port' => 3306,
+            'database' => 'fake_database',
+            'user' => 'fake_user',
+            'password' => 'MonPassword123!',
+            'prefix' => 'ps_',
+            'platform' => 'b2c',
+            'enabled' => '1',
+        ]);
+
+        return new Response('Source fake créée');
+    }
+
+    private function getCronDisabledFile(): string
+    {
+        return $this->getParameter('kernel.project_dir') . '/cron/cron.disabled';
+    }
+
+    #[Route('/cron/toggle', name: 'cron_toggle', methods: ['POST'])]
+    public function toggleCron(): JsonResponse
+    {
+        $file = $this->getCronDisabledFile();
+
+        if (is_file($file)) {
+            unlink($file);
+            $enabled = true;
+        } else {
+            touch($file);
+            $enabled = false;
+        }
+
+        return $this->json([
+            'enabled' => $enabled,
+        ]);
+    }
 
 }

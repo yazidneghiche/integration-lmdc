@@ -38,6 +38,65 @@
     margin-top: 24px;
 }
 
+.cron-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 15px 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+
+    .cron-status {
+        margin-top: 3px;
+        font-size: 13px;
+        color: #777;
+    }
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        inset: 0;
+        cursor: pointer;
+        background: #ccc;
+        border-radius: 28px;
+        transition: 0.2s;
+
+        &::before {
+            content: "";
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            left: 3px;
+            top: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+    }
+
+    input:checked + .slider {
+        background: #28a745;
+    }
+
+    input:checked + .slider::before {
+        transform: translateX(24px);
+    }
+}
+
 @media (max-width: 650px) {
     .mapping-row {
         grid-template-columns: 1fr;

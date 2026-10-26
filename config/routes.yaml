@@ -9,3 +9,10 @@
 
 controllers:
     resource: routing.controllers
+
+home:
+    path: /
+    controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController
+    defaults:
+        route: app_admin_dashboard
+        permanent: false

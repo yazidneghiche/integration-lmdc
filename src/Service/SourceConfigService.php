@@ -74,6 +74,16 @@ class SourceConfigService
             'enabled' => isset($data['enabled']),
         ];
 
+
+        // on desactive si mauvaise connexion
+        if ($sources[$name]['enabled']) {
+            try {
+                $this->testConfig($sources[$name]);
+            } catch (\Throwable $exception) {
+                $sources[$name]['enabled'] = false;
+            }
+        }
+
         ksort($sources);
         $this->write($sources);
     }
@@ -93,6 +103,12 @@ class SourceConfigService
             throw new \InvalidArgumentException('Source inconnue.');
         }
 
+        $this->testConfig($config);
+    }
+
+
+    private function testConfig(array $config): void
+    {
         $dsn = sprintf(
             'mysql:host=%s;port=%d;dbname=%s;charset=%s',
             $config['host'],
@@ -101,9 +117,14 @@ class SourceConfigService
             $config['charset'] ?? 'utf8mb4'
         );
 
-        new PDO($dsn, $config['user'], $config['password'], [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]);
+        new PDO(
+            $dsn,
+            $config['user'],
+            $config['password'],
+            [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ]
+        );
     }
 
     private function write(array $sources): void
@@ -119,5 +140,36 @@ class SourceConfigService
             @unlink($temporaryFile);
             throw new \RuntimeException('Impossible de remplacer la configuration des sources.');
         }
+    }
+
+    public function checkEnabledSources(): array
+    {
+        $sources = $this->all();
+        $status = [];
+        $changed = false;
+
+        foreach ($sources as $name => &$source) {
+            if (!($source['enabled'] ?? false)) {
+                $status[$name] = false;
+                continue;
+            }
+
+            try {
+                $this->testConfig($source);
+                $status[$name] = true;
+            } catch (\Throwable $exception) {
+                $source['enabled'] = false;
+                $status[$name] = false;
+                $changed = true;
+            }
+        }
+
+        unset($source);
+
+        if ($changed) {
+            $this->write($sources);
+        }
+
+        return $status;
     }
 }

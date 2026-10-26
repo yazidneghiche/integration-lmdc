@@ -36,11 +36,14 @@ final class AdminController extends AbstractController
     ): Response {
 
         $disabledFile = $this->getParameter('kernel.project_dir') . '/cron/cron.disabled';
-
         $cronEnabled = !is_file($disabledFile);
 
+        $sourceConnections = $sourceConfigService->checkEnabledSources();
+        $sources = $sourceConfigService->all();
+
         return $this->render('admin/index.html.twig', [
-            'sources' => $sourceConfigService->all(),
+            'sources' => $sources,
+            'sourceConnections' => $sourceConnections,
             'monitoring' => $monitoringService->getStatus(),
             'cronEnabled' => $cronEnabled,
             'stats' => [
@@ -50,6 +53,7 @@ final class AdminController extends AbstractController
                 'ordersSynchronized' => $orderRepository->countSynchronized(),
             ],
         ]);
+
     }
 
     #[Route('/sources/new', name: 'source_new', methods: ['GET', 'POST'])]

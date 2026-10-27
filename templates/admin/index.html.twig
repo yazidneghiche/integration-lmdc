@@ -93,6 +93,18 @@
             <h1>Administration LMDC</h1>
             <p>État des synchronisations et configuration des sources PrestaShop.</p>
         </div>
+        <div>
+            <form method="post" action="{{ path('app_logout') }}">
+                <input type="hidden"
+                       name="_csrf_token"
+                       value="{{ csrf_token('logout') }}">
+
+                <button type="submit">
+                    Déconnexion
+                </button>
+            </form>
+        </div>
+
         <a class="button" href="{{ path('app_admin_source_new') }}">Ajouter une source</a>
     </header>
 

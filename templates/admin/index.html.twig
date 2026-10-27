@@ -82,6 +82,32 @@
         .switch input:checked + .slider::before {
             transform: translateX(24px);
         }
+
+        .bloc-add-new-src{
+            display:flex;
+            justify-content:right !important;
+        }
+        .logout-form {
+            margin: 0;
+        }
+
+        .logout-btn {
+            padding: 8px 14px;
+            border: 1px solid #dc3545;
+            border-radius: 6px;
+            background: transparent;
+            color: #dc3545;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            background: #dc3545;
+            color: #fff;
+        }
+
     </style>
 {% endblock %}
 
@@ -93,25 +119,26 @@
             <h1>Administration LMDC</h1>
             <p>État des synchronisations et configuration des sources PrestaShop.</p>
         </div>
+
         <div>
-            <form method="post" action="{{ path('app_logout') }}">
+            <form method="post" action="{{ path('app_logout') }}" class="logout-form">
                 <input type="hidden"
                        name="_csrf_token"
                        value="{{ csrf_token('logout') }}">
 
-                <button type="submit">
+                <button type="submit" class="logout-btn">
                     Déconnexion
                 </button>
             </form>
         </div>
-
-        <a class="button" href="{{ path('app_admin_source_new') }}">Ajouter une source</a>
     </header>
 
     {% for type, messages in app.flashes %}
         {% for message in messages %}<div class="flash flash-{{ type }}">{{ message }}</div>{% endfor %}
     {% endfor %}
-
+    <div class="page-header bloc-add-new-src" >
+        <a class="button" href="{{ path('app_admin_source_new') }}">Ajouter une source</a>
+    </div>
     <div class="cron-control">
         <span>Synchronisation automatique</span>
 

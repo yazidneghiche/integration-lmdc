@@ -41,6 +41,7 @@ class ApiOrder
             'items' => $items,
             'source' => $order->getSource(),
             'platform' => $order->getPlatform(),
+            'type' => $order->getType(),
             'createdAt' => $order->getCreatedAt()?->format(DATE_ATOM),
         ];
 
@@ -92,6 +93,7 @@ class ApiOrder
                 'ct_number' => $order->getCtNumber(),
                 'items' => $items,
                 'b2c_site_id' =>  $order->getId(),
+                'type' => $order->getType(),
                 'source' => $order->getSource(),
                 'platform' => $order->getPlatform(),
                 'createdAt' => $order->getCreatedAt()?->format(DATE_ATOM),

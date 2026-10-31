@@ -93,6 +93,11 @@ class Order
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $email = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $type = null; // 0 = devis, 1 = commande, 2 = facture
+
+
+
     public function __construct()
     {
         $this->orderProducts = new ArrayCollection();
@@ -383,6 +388,22 @@ class Order
     public function setEmail(?string $email): static
     {
         $this->email = $email;
+
+        return $this;
+    }
+
+    public function getType(): ?int
+    {
+        return $this->type;
+    }
+
+    public function setType(int $type): static
+    {
+        if (!in_array($type, [0, 1, 2], true)) {
+            throw new \InvalidArgumentException('Type attendu : 0, 1 ou 2.');
+        }
+
+        $this->type = $type;
 
         return $this;
     }

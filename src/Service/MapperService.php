@@ -149,6 +149,7 @@ class MapperService
 
             $order
                 ->setEmail($email)
+                ->setType(2)
                 ->setAccount($account)
                 ->setSource($source)
                 ->setPlatform($platform)

@@ -217,12 +217,19 @@ final class AdminController extends AbstractController
             }
 
             try {
-                $service->save(
+                $connectionError = $service->save(
                     (string) $request->request->get('name'),
                     $request->request->all(),
                     $originalName
                 );
                 $this->addFlash('success', 'La source a été enregistrée.');
+
+                if ($connectionError !== null) {
+                    $this->addFlash('warning', sprintf(
+                        'La source reste active, mais la connexion a échoué : %s',
+                        $connectionError
+                    ));
+                }
 
                 return $this->redirectToRoute('app_admin_dashboard');
             } catch (\Throwable $exception) {

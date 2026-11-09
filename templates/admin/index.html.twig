@@ -173,7 +173,7 @@
                 {% for name, source in sources %}
                     <tr>
                         <td><code>{{ name }}</code></td><td>{{ source.label }}</td><td>{{ source.database }}</td><td>{{ source.prefix }}</td>
-                        <td>{{ source.platform|default('b2c')|upper }}</td><td>{{ source.enabled ? 'Active' : 'Inactive' }}</td>
+                        <td>{{ source.platform|default('b2c')|upper }}</td><td>{{ source.enabled ? 'Active' : 'Inactive' }}{% if source.enabled and not sourceConnections[name]|default(false) %} <span class="error-text">(connexion impossible)</span>{% endif %}</td>
                         <td class="actions">
                             <a href="{{ path('app_admin_source_details', {source: name}) }}">Détails</a>
                             <a href="{{ path('app_admin_source_edit', {source: name}) }}">Modifier</a>

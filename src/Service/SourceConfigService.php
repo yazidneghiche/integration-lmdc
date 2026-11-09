@@ -25,7 +25,12 @@ class SourceConfigService
         return $this->all()[$name] ?? null;
     }
 
-    public function save(string $name, array $data, ?string $originalName = null): void
+    /**
+     * Enregistre la source et retourne l'erreur de connexion éventuelle.
+     *
+     * L'état actif / inactif choisi est toujours conservé.
+     */
+    public function save(string $name, array $data, ?string $originalName = null): ?string
     {
         $name = strtolower(trim($name));
 
@@ -75,17 +80,21 @@ class SourceConfigService
         ];
 
 
-        // on desactive si mauvaise connexion
+        // Une connexion en échec est signalée, sans désactiver la source
+        $connectionError = null;
+
         if ($sources[$name]['enabled']) {
             try {
                 $this->testConfig($sources[$name]);
             } catch (\Throwable $exception) {
-                $sources[$name]['enabled'] = false;
+                $connectionError = $exception->getMessage();
             }
         }
 
         ksort($sources);
         $this->write($sources);
+
+        return $connectionError;
     }
 
     public function remove(string $name): void
@@ -123,6 +132,7 @@ class SourceConfigService
             $config['password'],
             [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_TIMEOUT => 5,
             ]
         );
     }
@@ -142,13 +152,17 @@ class SourceConfigService
         }
     }
 
+    /**
+     * État de connexion des sources actives, pour affichage uniquement :
+     * la configuration n'est jamais modifiée.
+     *
+     * @return array<string, bool>
+     */
     public function checkEnabledSources(): array
     {
-        $sources = $this->all();
         $status = [];
-        $changed = false;
 
-        foreach ($sources as $name => &$source) {
+        foreach ($this->all() as $name => $source) {
             if (!($source['enabled'] ?? false)) {
                 $status[$name] = false;
                 continue;
@@ -158,16 +172,8 @@ class SourceConfigService
                 $this->testConfig($source);
                 $status[$name] = true;
             } catch (\Throwable $exception) {
-                $source['enabled'] = false;
                 $status[$name] = false;
-                $changed = true;
             }
-        }
-
-        unset($source);
-
-        if ($changed) {
-            $this->write($sources);
         }
 
         return $status;

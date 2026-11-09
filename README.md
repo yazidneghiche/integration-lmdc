@@ -20,9 +20,26 @@ API_MONITORING_PATH="/api/monitoring"
 MAILER_DSN="smtp://user:password@serveur:587"
 MAIL_FROM="integration@lmdc-lab.com"
 MAIL_TO="destinataire@lmdc-lab.com"
-ADMIN_USER="admin"
-ADMIN_PASSWORD="mot-de-passe-solide"
+GATEWAY_USER="identifiant-gateway"
+GATEWAY_PASSWORD_HASH='$2y$13$...'
 ```
+
+### Accès HTTP Basic de `/gateway`
+
+Les routes `/gateway/*` sont protégées par un identifiant et un mot de passe lus dans l'environnement :
+
+- `GATEWAY_USER` : identifiant ;
+- `GATEWAY_PASSWORD_HASH` : mot de passe **haché** (jamais le mot de passe en clair).
+
+Générer le hash :
+
+```bash
+php bin/console security:hash-password 'mot-de-passe-solide' 'Symfony\Component\Security\Core\User\InMemoryUser'
+```
+
+Copier la valeur « Password hash » dans `GATEWAY_PASSWORD_HASH`, **entre apostrophes** : le hash contient des `$` qui seraient interprétés comme des variables dans un fichier `.env` avec des guillemets doubles.
+
+Tant que `GATEWAY_PASSWORD_HASH` n'est pas renseigné, aucun accès à `/gateway` n'est accepté.
 
 Lors d'une nouvelle installation, copier également `config/sources.php.dist` vers `config/sources.php`, puis renseigner la première source depuis l'administration.
 

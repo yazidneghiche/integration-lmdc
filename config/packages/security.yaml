@@ -1,10 +1,14 @@
+parameters:
+    # Identifiant utilisé si GATEWAY_USER est vide ou absent.
+    # Sans GATEWAY_PASSWORD_HASH, aucun mot de passe n'est accepté sur /gateway.
+    gateway_default_user: gateway
+
 security:
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: auto
 
-        # Ancien accès HTTP Basic conservé pour /gateway.
-        Symfony\Component\Security\Core\User\InMemoryUser:
-            algorithm: plaintext
+        # Accès HTTP Basic de /gateway : mot de passe haché (voir README).
+        Symfony\Component\Security\Core\User\InMemoryUser: auto
 
     providers:
         app_user_provider:
@@ -15,8 +19,8 @@ security:
         users_in_memory:
             memory:
                 users:
-                    admin:
-                        password: admin
+                    '%env(default:gateway_default_user:GATEWAY_USER)%':
+                        password: '%env(default::GATEWAY_PASSWORD_HASH)%'
                         roles: ['ROLE_ADMIN']
 
     firewalls:
@@ -39,6 +43,10 @@ security:
                 check_path: app_login
                 enable_csrf: true
                 default_target_path: app_admin_dashboard
+
+            # 5 tentatives par minute (par identifiant + IP)
+            login_throttling:
+                max_attempts: 5
 
             logout:
                 path: app_logout

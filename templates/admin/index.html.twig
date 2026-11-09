@@ -146,6 +146,7 @@
             <input
                 type="checkbox"
                 id="cron-toggle"
+                data-token="{{ csrf_token('cron-toggle') }}"
                 {{ cronEnabled ? 'checked' : '' }}
             >
             <span class="slider"></span>
@@ -338,7 +339,8 @@ if (cronToggle) {
             const response = await fetch('/admin/cron/toggle', {
                 method: 'POST',
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': cronToggle.dataset.token
                 }
             });
 

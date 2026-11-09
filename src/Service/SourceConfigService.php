@@ -48,6 +48,7 @@ class SourceConfigService
 
         $database = trim((string) ($data['database'] ?? ''));
         $prefix = trim((string) ($data['prefix'] ?? 'ps_'));
+        $platform = $data['platform'] ?? 'b2c';
 
         if (!preg_match('/^[A-Za-z0-9_\-]+$/', $database)) {
             throw new \InvalidArgumentException('Le nom de la base est invalide.');
@@ -68,9 +69,10 @@ class SourceConfigService
             'password' => $password !== '' ? $password : ($existing['password'] ?? ''),
             'charset' => 'utf8mb4',
             'prefix' => $prefix,
-            'platform' => in_array(($data['platform'] ?? 'b2c'), ['b2b', 'b2c'], true)
+           /* 'platform' => in_array(($data['platform'] ?? 'b2c'), ['b2b', 'b2c'], true)
                 ? $data['platform']
-                : 'b2c',
+                : 'b2c',**/
+            'platform' => in_array($platform, ['b2b', 'b2c'], true) ? $platform : 'b2c',
             'enabled' => isset($data['enabled']),
         ];
 

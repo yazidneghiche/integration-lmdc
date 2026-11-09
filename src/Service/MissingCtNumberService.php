@@ -37,7 +37,7 @@ TEXT;
 
         foreach ($accounts as $account) {
             $message .= sprintf(
-                "- %s %s — %s\n",
+                "- %s %s — %s — %s\n",
                 $account->getFirstname() ?? '',
                 $account->getLastname() ?? '',
                 $account->getEmail() ?? '',

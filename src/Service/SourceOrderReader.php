@@ -6,6 +6,13 @@ use PDO;
 
 class SourceOrderReader
 {
+    /**
+     * Présence de la colonne ct_number dans la table customer, par source.
+     *
+     * @var array<string, bool>
+     */
+    private array $ctNumberColumn = [];
+
     public function __construct(
         private readonly SourceConnection $sourceConnection,
     )
@@ -22,22 +29,9 @@ class SourceOrderReader
         ?\DateTimeInterface $lastUpdate = null
     ): array
     {
-
         $pdo = $this->sourceConnection->connect($source);
-        $config = $this->sourceConnection->getConfig($source);
 
-        $prefix = $config['prefix'];
-
-        $sql = $this->getOrderQuery( $source, $prefix);
-
-        $statement = $pdo->prepare($sql);
-
-        $statement->execute([
-            'lastUpdate' => $lastUpdate?->format('Y-m-d H:i:s')
-                    ?? '1970-01-01 00:00:00',
-        ]);
-
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+        return $this->fetchOrders($pdo, $source, $lastUpdate);
     }
 
     /**
@@ -51,9 +45,115 @@ class SourceOrderReader
     ): array
     {
         $pdo = $this->sourceConnection->connect($source);
-        $config = $this->sourceConnection->getConfig($source);
 
-        $prefix = $config['prefix'];
+        return $this->fetchOrderItems($pdo, $source, $sourceOrderId);
+    }
+
+    /**
+     * Récupère les commandes avec leurs lignes brutes.
+     *
+     * @return array<int, array{
+     *     order: array<string, mixed>,
+     *     items: array<int, array<string, mixed>>
+     * }>
+     */
+    public function readOrdersWithItems(
+        string              $source,
+        ?\DateTimeInterface $lastUpdate = null
+    ): array
+    {
+        // Une seule connexion pour les commandes et toutes leurs lignes
+        $pdo = $this->sourceConnection->connect($source);
+
+        $orders = $this->fetchOrders($pdo, $source, $lastUpdate);
+
+        $result = [];
+
+        foreach ($orders as $order) {
+            if (!isset($order['id_order'])) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'La commande provenant de la source "%s" ne contient pas de champ "id_order".',
+                        $source
+                    )
+                );
+            }
+
+            $result[] = [
+                'order' => $order,
+                'items' => $this->fetchOrderItems(
+                    $pdo,
+                    $source,
+                    $order['id_order']
+                ),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Construit la requête des commandes.
+     *
+     * c.ct_number n'existe pas dans une table customer PrestaShop standard :
+     * la colonne n'est sélectionnée que si la boutique l'a ajoutée.
+     */
+    public function buildOrderQuery(string $prefix, bool $withCtNumber): string
+    {
+        return sprintf(
+            '
+            SELECT
+                o.*,
+                c.company,%s
+                c.email
+            FROM %sorders o
+            LEFT JOIN %scustomer c
+                ON c.id_customer = o.id_customer
+            WHERE o.date_upd > :lastUpdate
+            ORDER BY o.date_upd ASC
+            ',
+            $withCtNumber ? "\n                c.ct_number," : '',
+            $prefix,
+            $prefix
+        );
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchOrders(
+        PDO                 $pdo,
+        string              $source,
+        ?\DateTimeInterface $lastUpdate
+    ): array
+    {
+        $prefix = $this->sourceConnection->getConfig($source)['prefix'];
+
+        $sql = $this->buildOrderQuery(
+            $prefix,
+            $this->hasCtNumberColumn($pdo, $source, $prefix)
+        );
+
+        $statement = $pdo->prepare($sql);
+
+        $statement->execute([
+            'lastUpdate' => $lastUpdate?->format('Y-m-d H:i:s')
+                    ?? '1970-01-01 00:00:00',
+        ]);
+
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchOrderItems(
+        PDO        $pdo,
+        string     $source,
+        int|string $sourceOrderId
+    ): array
+    {
+        $prefix = $this->sourceConnection->getConfig($source)['prefix'];
 
         $sql = sprintf(
             '
@@ -76,98 +176,19 @@ class SourceOrderReader
     }
 
     /**
-     * Récupère les commandes avec leurs lignes brutes.
-     *
-     * @return array<int, array{
-     *     order: array<string, mixed>,
-     *     items: array<int, array<string, mixed>>
-     * }>
+     * Vérifie une seule fois par source si la table customer contient ct_number.
      */
-    public function readOrdersWithItems(
-        string              $source,
-        ?\DateTimeInterface $lastUpdate = null
-    ): array
+    private function hasCtNumberColumn(PDO $pdo, string $source, string $prefix): bool
     {
-        $orders = $this->readOrders($source, $lastUpdate);
+        if (!isset($this->ctNumberColumn[$source])) {
+            $statement = $pdo->query(
+                sprintf("SHOW COLUMNS FROM `%scustomer` LIKE 'ct_number'", $prefix)
+            );
 
-        $result = [];
-
-        foreach ($orders as $order) {
-            if (!isset($order['id_order'])) {
-                throw new \RuntimeException(
-                    sprintf(
-                        'La commande provenant de la source "%s" ne contient pas de champ "id_order".',
-                        $source
-                    )
-                );
-            }
-
-            $result[] = [
-                'order' => $order,
-                'items' => $this->readOrderItems(
-                    $source,
-                    $order['id_order']
-                ),
-            ];
+            $this->ctNumberColumn[$source] = $statement !== false
+                && $statement->fetch(PDO::FETCH_ASSOC) !== false;
         }
 
-        return $result;
-    }
-
-    private function getOrderQuery(string $source, string $prefix): string
-    {
-
-        return match ($source) {
-            'anyskin' => sprintf(
-                '
-            SELECT
-                o.*,
-                c.company,
-                c.ct_number,
-                c.email
-            FROM %sorders o
-            LEFT JOIN %scustomer c
-                ON c.id_customer = o.id_customer
-            WHERE o.date_upd > :lastUpdate
-            ORDER BY o.date_upd ASC
-            ',
-                $prefix,
-                $prefix
-            ),
-
-            'slaparis' => sprintf(
-                '
-            SELECT
-                o.*,
-                c.company,
-                c.email
-            FROM %sorders o
-            LEFT JOIN %scustomer c
-                ON c.id_customer = o.id_customer
-            WHERE o.date_upd > :lastUpdate
-            ORDER BY o.date_upd ASC
-            ',
-                $prefix,
-                $prefix
-            ),
-
-            default => sprintf(
-                '
-            SELECT
-                o.*,
-                c.company,
-                -- c.ct_number,
-                c.email
-            FROM %sorders o
-            LEFT JOIN %scustomer c
-                ON c.id_customer = o.id_customer
-            WHERE o.date_upd > :lastUpdate
-            ORDER BY o.date_upd ASC
-            ',
-                $prefix,
-                $prefix
-            ),
-
-        };
+        return $this->ctNumberColumn[$source];
     }
 }

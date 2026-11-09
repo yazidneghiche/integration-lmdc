@@ -38,16 +38,23 @@ class SyncGatewayCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $failed = false;
+
         try {
             $sage = $this->syncAccountService->synchronize();
             $output->writeln(sprintf('Sage : %d compte(s) synchronisé(s).', $sage['total']));
+        } catch (\Throwable $exception) {
+            $output->writeln('<error>sage : ' . $exception->getMessage() . '</error>');
+            $failed = true;
+        }
 
-            $requestedSource = $input->getArgument('source');
-            $sources = $requestedSource
-                ? [(string) $requestedSource]
-                : $this->sourceConnection->getEnabledSources();
+        $requestedSource = $input->getArgument('source');
+        $sources = $requestedSource
+            ? [(string) $requestedSource]
+            : $this->sourceConnection->getEnabledSources();
 
-            foreach ($sources as $source) {
+        foreach ($sources as $source) {
+            try {
                 $customers = $this->customerReader->readCustomers($source);
                 $accountResult = $this->mapperService->run($customers, $source, 'account');
 
@@ -64,13 +71,12 @@ class SyncGatewayCommand extends Command
                     $orderResult['updated'],
                     $accountResult['skipped'] + $orderResult['skipped']
                 ));
+            } catch (\Throwable $exception) {
+                $output->writeln('<error>' . $source . ' : ' . $exception->getMessage() . '</error>');
+                $failed = true;
             }
-
-            return Command::SUCCESS;
-        } catch (\Throwable $exception) {
-            $output->writeln('<error>' . $exception->getMessage() . '</error>');
-
-            return Command::FAILURE;
         }
+
+        return $failed ? Command::FAILURE : Command::SUCCESS;
     }
 }
